@@ -1,0 +1,66 @@
+import { ThirdwebSDK } from "@thirdweb-dev/sdk";
+import type { NextApiRequest, NextApiResponse } from "next";
+import "../styles/globals.css";
+
+export default async function server(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  try {
+    // De-structure the arguments we passed in out of the request body
+    const { playerAddress, username, recordSeconds } = JSON.parse(req.body);
+
+    // You'll need to add your private key in a .env.local file in the root of your project
+    // !!!!! NOTE !!!!! NEVER LEAK YOUR PRIVATE KEY to anyone!
+    if (!process.env.PRIVATE_KEY) {
+      throw new Error("You're missing PRIVATE_KEY in your .env.local file.");
+    }
+
+    // Initialize the Thirdweb SDK on the serverside
+    const sdk = ThirdwebSDK.fromPrivateKey(
+      // Your wallet private key (read it in from .env.local file)
+      process.env.PRIVATE_KEY as string,
+      "mumbai"
+    );
+
+    // Load the NFT Collection via it's contract address using the SDK
+    const nftCollection = await sdk.getContract(
+      // Replace this with your NFT Collection contract address
+      process.env.NEXT_PUBLIC_NFT_COLLECTION_ADDRESS!,
+      "nft-collection"
+    );
+
+    // Here we can make all kinds of cool checks to see if the user is eligible to mint the NFT.
+    // Here are a few examples:
+
+    // Check that this wallet hasn't already minted a page - 1 NFT per wallet
+    const hasMinted = (await nftCollection.balanceOf(playerAddress)).gt(0);
+    if (hasMinted) {
+      res.status(400).json({ error: "Already minted" });
+      return;
+    }
+
+    // If all the checks pass, begin generating the signature...
+    // Generate the signature for the page NFT
+    const signedPayload = await nftCollection.signature.generate({
+      to: playerAddress,
+      metadata: {
+        name: username as string,
+        image:
+          "ipfs://QmZvVNpnnbwsPzVhRoRSuT4T3DFV6wiwzBdXmJAdgGk6UP/platformer.png" as string,
+        description: `${username} finished the game in ${recordSeconds} seconds`,
+        properties: {
+          time: recordSeconds,
+          // Add any properties you want to store on the NFT
+        },
+      },
+    });
+
+    // Return back the signedPayload to the client.
+    res.status(200).json({
+      signedPayload: JSON.parse(JSON.stringify(signedPayload)),
+    });
+  } catch (e) {
+    res.status(500).json({ error: `Server error ${e}` });
+  }
+}
