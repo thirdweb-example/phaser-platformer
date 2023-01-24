@@ -11,7 +11,8 @@
   "dependencies": {
     "@thirdweb-dev/react": "^3",
     "@thirdweb-dev/sdk": "^3",
-    "@thirdweb-dev/storage": "^1.0.6",
+    "@thirdweb-dev/storage": "^1",
+    "@thirdweb-dev/wallets": "^0",
     "ethers": "^5.6.8",
     "next": "^12.1.6",
     "phaser": "^3.55.2",
