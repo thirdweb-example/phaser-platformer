@@ -1,8 +1,6 @@
 import { ThirdwebSDK } from "@thirdweb-dev/sdk";
-import { ethers } from "ethers";
+import { ChainId } from "@thirdweb-dev/sdk";
 import Phaser from "phaser";
-
-const CHAIN_ID = 80001;
 
 export default class EndingScene extends Phaser.Scene {
   score = 0;
@@ -75,27 +73,11 @@ export default class EndingScene extends Phaser.Scene {
   mintWithSignature = async () => {
     if (!window.ethereum) return;
 
-    // get provider
-    const provider = new ethers.providers.Web3Provider(
-      window.ethereum as any,
-      "any"
-    );
-
-    // get user connected chain id
-    const { chainId } = await provider.getNetwork();
-
-    // check if user is connected to Mumbai
-    if (chainId !== CHAIN_ID) {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: `0x${CHAIN_ID.toString(16)}` }],
-      });
-    }
-
-    // prompt Metamask for sign in
-    await provider.send("eth_requestAccounts", []);
-    const signer = provider.getSigner();
-    const address = await signer.getAddress();
+    // Connect with Metamask and switch to Mumbai
+    const MetaMask = (await import("@thirdweb-dev/wallets")).MetaMask;
+    const wallet = new MetaMask({ appName: "Phaser-Platformer" });
+    const { address, chainId } = await wallet.connect(ChainId.Mumbai);
+    const signer = await wallet.getSigner(chainId);
 
     // Fetch the NFT collection from thirdweb via it's contract address.
     const sdk = ThirdwebSDK.fromSigner(signer);
